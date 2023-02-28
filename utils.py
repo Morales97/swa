@@ -65,7 +65,7 @@ def eval(loader, model, criterion, epoch, name=''):
         output = model(input_var)
         loss = criterion(output, target_var)
 
-        loss_sum += loss.data[0] * input.size(0)
+        loss_sum += loss.item() * input.size(0)
         pred = output.data.max(1, keepdim=True)[1]
         correct += pred.eq(target_var.data.view_as(pred)).sum().item()
 
