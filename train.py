@@ -152,14 +152,14 @@ if args.swa:
     columns = columns[:-1] + ['swa_te_loss', 'swa_te_acc'] + columns[-1:]
     swa_res = {'loss': None, 'accuracy': None}
 
-utils.save_checkpoint(
-    args.dir,
-    start_epoch,
-    state_dict=model.state_dict(),
-    swa_state_dict=swa_model.state_dict() if args.swa else None,
-    swa_n=swa_n if args.swa else None,
-    optimizer=optimizer.state_dict()
-)
+# utils.save_checkpoint(
+#     args.dir,
+#     start_epoch,
+#     state_dict=model.state_dict(),
+#     swa_state_dict=swa_model.state_dict() if args.swa else None,
+#     swa_n=swa_n if args.swa else None,
+#     optimizer=optimizer.state_dict()
+# )
 
 for epoch in range(start_epoch, args.epochs):
     time_ep = time.time()
