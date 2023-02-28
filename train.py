@@ -68,7 +68,7 @@ model_cfg = getattr(models, args.model)
 
 print('Loading dataset %s from %s' % (args.dataset, args.data_path))
 ds = getattr(torchvision.datasets, args.dataset)
-path = os.path.join(args.data_path, args.dataset.lower())
+path = args.data_path
 train_set = ds(path, train=True, download=True, transform=model_cfg.transform_train)
 test_set = ds(path, train=False, download=True, transform=model_cfg.transform_test)
 loaders = {
@@ -218,3 +218,7 @@ if args.epochs % args.save_freq != 0:
     )
 
 wandb.finish()
+
+
+# SGD: python train.py --dataset=CIFAR100 --data_path=/mloraw1/danmoral/data/cifar-100-python --model=PreResNet164 --epochs=150  --lr_init=0.1 --wd=3e-4
+# SWA: python train.py --dataset=CIFAR100 --data_path=/mloraw1/danmoral/data/cifar-100-python --model=PreResNet164 --epochs=150  --lr_init=0.1 --wd=3e-4 --swa --swa_start=126 --swa_lr=0.05
