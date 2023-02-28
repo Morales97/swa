@@ -42,7 +42,7 @@ def train_epoch(loader, model, criterion, optimizer, ema_opts=None, ema_interval
         
         if ema_opts is not None and i % ema_interval == 0:
             for alpha in ema_opts.keys():
-                ema_opts[alpha][i].update()
+                ema_opts[alpha].update()
 
     return {
         'loss': loss_sum / len(loader.dataset),
