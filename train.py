@@ -185,6 +185,7 @@ for epoch in range(start_epoch, args.epochs):
         if epoch == 0 or epoch % args.eval_freq == args.eval_freq - 1 or epoch == args.epochs - 1:
             utils.bn_update(loaders['train'], swa_model)
             swa_res = utils.eval(loaders['test'], swa_model, criterion, epoch, name='SWA Test ')
+            wandb.log(swa_res)
         else:
             swa_res = {'loss': None, 'accuracy': None}
 
