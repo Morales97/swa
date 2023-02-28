@@ -51,13 +51,13 @@ parser.add_argument('--ema_interval', type=int, default=1, help='period of steps
 
 args = parser.parse_args()
 
-wandb.init(name=args.expt_name, dir=args.save_dir, config=args, project=args.project, entity=args.entity)
+wandb.init(name=args.expt_name, dir=args.dir, config=args, project=args.project, entity=args.entity)
 
-print('Preparing directory %s' % args.dir)
-os.makedirs(args.dir, exist_ok=True)
-with open(os.path.join(args.dir, 'command.sh'), 'w') as f:
-    f.write(' '.join(sys.argv))
-    f.write('\n')
+# print('Preparing directory %s' % args.dir)
+# os.makedirs(args.dir, exist_ok=True)
+# with open(os.path.join(args.dir, 'command.sh'), 'w') as f:
+#     f.write(' '.join(sys.argv))
+#     f.write('\n')
 
 torch.backends.cudnn.benchmark = True
 torch.manual_seed(args.seed)
