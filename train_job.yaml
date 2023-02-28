@@ -1,0 +1,55 @@
+apiVersion: run.ai/v1
+kind: RunaiJob
+metadata:
+  name: swa-repo-swa
+  labels:
+    user: danmoral
+spec:
+  template:
+    metadata:
+      labels:
+        user: danmoral # User e.g. firstname.lastname
+    spec:
+      hostIPC: true
+      schedulerName: runai-scheduler
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 226647 # insert uid found in people.epfl in admistrative data
+        runAsGroup: 11169 # insert gid as found in people.epfl in admistrative data
+        fsGroup: 11169
+      containers:
+      - name: container-name
+        image: ic-registry.epfl.ch/mlo/dani-mlo:v7 # thijs' image with minimal modification
+        env: 
+          - name: WANDB_API_KEY # setting the API key for wandb as enviroment variable. it is savely stored as a kubectl secret
+            valueFrom: 
+              secretKeyRef:
+                name: wandb
+                key: wandb-api-key  
+        workingDir : /mlodata1/danmoral/swa
+        command: ["/bin/bash"]
+        args:
+        - "-c"
+        # - "python train.py --expt_name=SGD_SWA_repo --dataset=CIFAR100 --data_path=/mloraw1/danmoral/data --model=PreResNet164 --epochs=150  --lr_init=0.1 --wd=3e-4 --alpha 0.95 0.992 --ema_interval=16"
+        - "python train.py --expt_name=SWA0.05_SWA_repo --dataset=CIFAR100 --data_path=/mloraw1/danmoral/data --model=PreResNet164 --epochs=150  --lr_init=0.1 --wd=3e-4 --swa --swa_start=126 --swa_lr=0.05 --alpha 0.95 0.992 --ema_interval=16"
+
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+        volumeMounts:
+          - mountPath: /mlodata1
+            name: mlodata1
+          - mountPath: /mloraw1
+            name: mloraw1
+          - mountPath: /scratch
+            name: scratch
+      volumes:
+        - name: mlodata1
+          persistentVolumeClaim:
+            claimName: runai-mlo-danmoral-mlodata1
+        - name: mloraw1
+          persistentVolumeClaim:
+            claimName: runai-mlo-danmoral-mloraw1
+        - name: scratch
+          persistentVolumeClaim:
+            claimName: runai-mlo-danmoral-scratch

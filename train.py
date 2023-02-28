@@ -168,11 +168,13 @@ for epoch in range(start_epoch, args.epochs):
     lr = schedule(epoch)
     utils.adjust_learning_rate(optimizer, lr)
     train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer, ema_opts, args.ema_interval)
+    train_res['Epoch'] = epoch
+    wandb.log(train_res)
     if epoch == 0 or epoch % args.eval_freq == args.eval_freq - 1 or epoch == args.epochs - 1:
         test_res = utils.eval(loaders['test'], model, criterion, epoch, name='Test ')
         wandb.log(test_res)
         for alpha in args.alpha:
-            ema_test_res = utils.eval(loaders['test'], ema_models[alpha], criterion, epoch, name=f'EMA {alpha} Test ')
+            ema_test_res = utils.eval(loaders['test'], ema_models[alpha], criterion, epoch, name=f'EMA {alpha} ')
             wandb.log(ema_test_res)
     else:
         test_res = {'loss': None, 'accuracy': None}

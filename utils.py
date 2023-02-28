@@ -45,8 +45,8 @@ def train_epoch(loader, model, criterion, optimizer, ema_opts=None, ema_interval
                 ema_opts[alpha].update()
 
     return {
-        'loss': loss_sum / len(loader.dataset),
-        'accuracy': correct / len(loader.dataset) * 100.0,
+        'Train Loss': loss_sum / len(loader.dataset),
+        'Train Accuracy': correct / len(loader.dataset) * 100.0,
     }
 
 
@@ -71,8 +71,8 @@ def eval(loader, model, criterion, epoch, name=''):
 
     return {
         'Epoch': epoch,
-        name + 'loss': loss_sum / len(loader.dataset),
-        name + 'accuracy': correct / len(loader.dataset) * 100.0,
+        name + 'Loss': loss_sum / len(loader.dataset),
+        name + 'Accuracy': correct / len(loader.dataset) * 100.0,
     }
 
 
