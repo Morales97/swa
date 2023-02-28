@@ -53,6 +53,7 @@ args = parser.parse_args()
 
 wandb.init(name=args.expt_name, dir=args.dir, config=args, project=args.project, entity=args.entity)
 
+# DM: not saving SWA models for now 
 # print('Preparing directory %s' % args.dir)
 # os.makedirs(args.dir, exist_ok=True)
 # with open(os.path.join(args.dir, 'command.sh'), 'w') as f:
