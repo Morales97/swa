@@ -220,5 +220,5 @@ if args.epochs % args.save_freq != 0:
 wandb.finish()
 
 
-# SGD: python train.py --dataset=CIFAR100 --data_path=/mloraw1/danmoral/data/cifar-100-python --model=PreResNet164 --epochs=150  --lr_init=0.1 --wd=3e-4
-# SWA: python train.py --dataset=CIFAR100 --data_path=/mloraw1/danmoral/data/cifar-100-python --model=PreResNet164 --epochs=150  --lr_init=0.1 --wd=3e-4 --swa --swa_start=126 --swa_lr=0.05
+# SGD: python train.py --expt_name=SGD_SWA_repo --dataset=CIFAR100 --data_path=/mloraw1/danmoral/data/cifar-100-python --model=PreResNet164 --epochs=150  --lr_init=0.1 --wd=3e-4
+# SWA: python train.py --expt_name=SWA0.05_SWA_repo --dataset=CIFAR100 --data_path=/mloraw1/danmoral/data/cifar-100-python --model=PreResNet164 --epochs=150  --lr_init=0.1 --wd=3e-4 --swa --swa_start=126 --swa_lr=0.05
