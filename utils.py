@@ -17,7 +17,7 @@ def save_checkpoint(dir, epoch, **kwargs):
     torch.save(state, filepath)
 
 
-def train_epoch(loader, model, criterion, optimizer):
+def train_epoch(loader, model, criterion, optimizer, ema_opts=None, ema_interval=None):
     loss_sum = 0.0
     correct = 0.0
 
@@ -39,6 +39,10 @@ def train_epoch(loader, model, criterion, optimizer):
         loss_sum += loss.data[0] * input.size(0)
         pred = output.data.max(1, keepdim=True)[1]
         correct += pred.eq(target_var.data.view_as(pred)).sum().item()
+        
+        if ema_opts is not None and i % ema_interval == 0:
+            for alpha in ema_opts.keys():
+                ema_opts[alpha][i].update()
 
     return {
         'loss': loss_sum / len(loader.dataset),
@@ -46,7 +50,7 @@ def train_epoch(loader, model, criterion, optimizer):
     }
 
 
-def eval(loader, model, criterion):
+def eval(loader, model, criterion, epoch, name=''):
     loss_sum = 0.0
     correct = 0.0
 
@@ -66,8 +70,9 @@ def eval(loader, model, criterion):
         correct += pred.eq(target_var.data.view_as(pred)).sum().item()
 
     return {
-        'loss': loss_sum / len(loader.dataset),
-        'accuracy': correct / len(loader.dataset) * 100.0,
+        'Epoch': epoch,
+        name + 'loss': loss_sum / len(loader.dataset),
+        name + 'accuracy': correct / len(loader.dataset) * 100.0,
     }
 
 
@@ -133,3 +138,37 @@ def bn_update(loader, model):
         n += b
 
     model.apply(lambda module: _set_momenta(module, momenta))
+
+
+class OptimizerEMA(object):
+    '''
+    EMA optimizer which can optionally apply EMA to BN statistics, with eman=True (see EMAN paper by Cai et al)
+    '''
+    def __init__(self, model, ema_model, alpha=0.999, eman=True, ramp_up=True):
+        self.model = model
+        self.ema_model = ema_model
+        self.alpha = alpha
+        self.eman = eman
+        self.step = 0
+        self.ramp_up = ramp_up
+
+
+    def update(self):
+        if self.ramp_up:
+            _alpha = min(self.alpha, (self.step + 1)/(self.step + 10)) 
+        else:
+            _alpha = self.alpha
+        self.step += 1
+        one_minus_alpha = 1.0 - _alpha
+
+        # update learnable parameters
+        for param, ema_param in zip(self.model.parameters(), self.ema_model.parameters()):
+            ema_param.mul_(_alpha)
+            ema_param.add_(param * one_minus_alpha)
+
+        if self.eman:
+            # update buffers (aka, non-learnable parameters). These are usually only BN stats
+            for buffer, ema_buffer in zip(self.model.buffers(), self.ema_model.buffers()):
+                if ema_buffer.dtype == torch.float32:      
+                    ema_buffer.mul_(_alpha)
+                    ema_buffer.add_(buffer * one_minus_alpha)

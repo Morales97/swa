@@ -8,10 +8,13 @@ import torchvision
 import models
 import utils
 import tabulate
+import wandb
 
+ENTITY = 'morales97'
+SAVE_DIR = '/mloraw1/danmoral/checkpoints/' 
 
 parser = argparse.ArgumentParser(description='SGD/SWA training')
-parser.add_argument('--dir', type=str, default=None, required=True, help='training directory (default: None)')
+parser.add_argument('--dir', type=str, default=SAVE_DIR, help='training directory (default: None)')
 
 parser.add_argument('--dataset', type=str, default='CIFAR10', help='dataset name (default: CIFAR10)')
 parser.add_argument('--data_path', type=str, default=None, required=True, metavar='PATH',
@@ -25,7 +28,7 @@ parser.add_argument('--resume', type=str, default=None, metavar='CKPT',
                     help='checkpoint to resume training from (default: None)')
 
 parser.add_argument('--epochs', type=int, default=200, metavar='N', help='number of epochs to train (default: 200)')
-parser.add_argument('--save_freq', type=int, default=25, metavar='N', help='save frequency (default: 25)')
+parser.add_argument('--save_freq', type=int, default=300, metavar='N', help='save frequency (default: 25)')
 parser.add_argument('--eval_freq', type=int, default=5, metavar='N', help='evaluation frequency (default: 5)')
 parser.add_argument('--lr_init', type=float, default=0.1, metavar='LR', help='initial learning rate (default: 0.01)')
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M', help='SGD momentum (default: 0.9)')
@@ -39,7 +42,16 @@ parser.add_argument('--swa_c_epochs', type=int, default=1, metavar='N',
 
 parser.add_argument('--seed', type=int, default=1, metavar='S', help='random seed (default: 1)')
 
+parser.add_argument('--project', type=str, default='MLO-CIFAR10', help='wandb project to use')
+parser.add_argument('--entity', type=str, default=ENTITY, help='wandb entity to use')
+parser.add_argument('--expt_name', type=str, default='', help='Name of the experiment for wandb')
+
+parser.add_argument('--alpha', type=float, nargs='+', default=[0.995], help='EMA decay. Can specify many to keep multiple EMAs')   
+parser.add_argument('--ema_interval', type=int, default=1, help='period of steps to perform EMA update')    
+
 args = parser.parse_args()
+
+wandb.init(name=args.expt_name, dir=args.save_dir, config=args, project=args.project, entity=args.entity)
 
 print('Preparing directory %s' % args.dir)
 os.makedirs(args.dir, exist_ok=True)
@@ -81,6 +93,15 @@ print('Preparing model')
 model = model_cfg.base(*model_cfg.args, num_classes=num_classes, **model_cfg.kwargs)
 model.cuda()
 
+ema_models, ema_opts = {}, {}
+for alpha in args.alpha:
+    ema_model = model_cfg.base(*model_cfg.args, num_classes=num_classes, **model_cfg.kwargs)
+    ema_model.cuda()
+    for param in ema_model.parameters():
+            param.detach_()
+    ema_opt = utils.OptimizerEMA(model, ema_model, alpha=alpha)
+    ema_models[alpha] = ema_model
+    ema_opts[alpha] = ema_opt
 
 if args.swa:
     print('SWA training')
@@ -145,9 +166,13 @@ for epoch in range(start_epoch, args.epochs):
 
     lr = schedule(epoch)
     utils.adjust_learning_rate(optimizer, lr)
-    train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer)
+    train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer, ema_opts, args.ema_interval)
     if epoch == 0 or epoch % args.eval_freq == args.eval_freq - 1 or epoch == args.epochs - 1:
-        test_res = utils.eval(loaders['test'], model, criterion)
+        test_res = utils.eval(loaders['test'], model, criterion, epoch, name='Test ')
+        wandb.log(test_res)
+        for alpha in args.alpha:
+            ema_test_res = utils.eval(loaders['test'], ema_models[alpha], criterion, epoch, name=f'EMA {alpha} Test ')
+            wandb.log(ema_test_res)
     else:
         test_res = {'loss': None, 'accuracy': None}
 
@@ -156,7 +181,7 @@ for epoch in range(start_epoch, args.epochs):
         swa_n += 1
         if epoch == 0 or epoch % args.eval_freq == args.eval_freq - 1 or epoch == args.epochs - 1:
             utils.bn_update(loaders['train'], swa_model)
-            swa_res = utils.eval(loaders['test'], swa_model, criterion)
+            swa_res = utils.eval(loaders['test'], swa_model, criterion, epoch, name='SWA Test ')
         else:
             swa_res = {'loss': None, 'accuracy': None}
 
@@ -191,3 +216,5 @@ if args.epochs % args.save_freq != 0:
         swa_n=swa_n if args.swa else None,
         optimizer=optimizer.state_dict()
     )
+
+wandb.finish()
